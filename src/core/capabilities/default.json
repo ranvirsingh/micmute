@@ -1,0 +1,6 @@
+{
+  "identifier": "settings",
+  "description": "Local settings and mute indicator windows",
+  "windows": ["main", "border-*"],
+  "permissions": ["core:default"]
+}

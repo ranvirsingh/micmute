@@ -1,0 +1,25 @@
+[package]
+name = "micmute"
+version = "0.1.0"
+edition = "2021"
+description = "A microphone mute shortcut with a visible screen border"
+license = "MIT"
+repository = "https://github.com/ranvirsingh/micmute"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = false

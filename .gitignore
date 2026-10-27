@@ -1,0 +1,17 @@
+node_modules/
+dist/
+src/core/target/
+src/core/gen/
+*.zip
+.DS_Store
+.vscode/
+.idea/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.key
+*.mobileprovision

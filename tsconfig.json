@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "lib": ["ES2022", "ESNext.Disposable", "DOM"],
+    "noEmit": true
+  },
+  "include": ["src/ui", "tests", "config/*.ts"]
+}

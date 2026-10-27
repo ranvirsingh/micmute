@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check:frontend
+
+  rust:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src/core
+      # tauri-build needs the frontend output to exist.
+      - run: npm ci && npm run build
+      - run: cargo fmt --manifest-path src/core/Cargo.toml -- --check
+      - run: cargo clippy --manifest-path src/core/Cargo.toml --all-targets --locked -- -D warnings
+      - run: cargo test --manifest-path src/core/Cargo.toml --locked
+      - run: npm run tauri -- build --bundles app -- --locked
+      - run: codesign --verify --deep --strict src/core/target/release/bundle/macos/MicMute.app

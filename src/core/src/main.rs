@@ -8,7 +8,7 @@ use std::{
     time::{Duration, Instant},
 };
 use tauri::{
-    Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewUrl, WebviewWindowBuilder,
+    Emitter, LogicalPosition, LogicalSize, Manager, State, WebviewUrl, WebviewWindowBuilder,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -131,11 +131,10 @@ fn overlay_windows(
     let screens: Vec<_> = monitors
         .iter()
         .map(|m| {
-            (
-                m.position().x,
-                m.position().y,
-                m.size().width,
-                m.size().height,
+            overlay::screen(
+                (m.position().x, m.position().y),
+                (m.size().width, m.size().height),
+                m.scale_factor(),
             )
         })
         .collect();
@@ -202,10 +201,10 @@ impl overlay::Windows for TauriOverlays<'_> {
             .set_ignore_cursor_events(true)
             .map_err(|e| e.to_string())?;
         window
-            .set_position(PhysicalPosition::new(screen.0, screen.1))
+            .set_position(LogicalPosition::new(screen.0, screen.1))
             .map_err(|e| e.to_string())?;
         window
-            .set_size(PhysicalSize::new(screen.2, screen.3))
+            .set_size(LogicalSize::new(screen.2, screen.3))
             .map_err(|e| e.to_string())?;
         Ok(())
     }

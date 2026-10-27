@@ -1,5 +1,18 @@
 //! Coordinates display windows without committing geometry after a partial failure.
+/// Display frame in logical points: x, y, width, height.
 pub type Screen = (i32, i32, u32, u32);
+
+/// Converts a monitor's pixel frame with that monitor's own scale.
+/// Window setters divide by the window's current scale, so pixels from a display
+/// with a different scale would misplace the overlay on mixed-DPI setups.
+pub fn screen(position: (i32, i32), size: (u32, u32), scale: f64) -> Screen {
+    (
+        (f64::from(position.0) / scale).round() as i32,
+        (f64::from(position.1) / scale).round() as i32,
+        (f64::from(size.0) / scale).round() as u32,
+        (f64::from(size.1) / scale).round() as u32,
+    )
+}
 
 pub trait Windows {
     fn reset(&mut self) -> Result<(), String>;
@@ -121,6 +134,16 @@ mod tests {
         windows.fail_configure = None;
         sync(&mut cached, SCREENS.to_vec(), &mut windows).unwrap();
         assert_eq!(windows.windows[&1], Some(SCREENS[1]));
+    }
+
+    #[test]
+    fn mixed_scale_displays_convert_with_their_own_scale() {
+        // Retina built-in at 2x beside a 1x external monitor on its left.
+        let builtin = screen((0, 0), (3024, 1964), 2.0);
+        let external = screen((-1920, 0), (1920, 1080), 1.0);
+        assert_eq!(builtin, (0, 0, 1512, 982));
+        assert_eq!(external, (-1920, 0, 1920, 1080));
+        assert_eq!(screen((1, 3), (5, 7), 2.0), (1, 2, 3, 4));
     }
 
     #[test]

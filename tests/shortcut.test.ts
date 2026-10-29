@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { recordShortcut, type KeyPress } from '../src/ui/shortcut';
+import { recordShortcut, shortcutKeys, type KeyPress } from '../src/ui/shortcut';
 
 const press = (code: string, key: string, mods: Partial<KeyPress> = {}): KeyPress => ({
   code,
@@ -46,5 +46,14 @@ describe('recordShortcut', () => {
 
   it('cancels on Escape', () => {
     expect(recordShortcut(press('Escape', 'Escape', { metaKey: true }))).toEqual({ kind: 'cancel' });
+  });
+});
+
+describe('shortcutKeys', () => {
+  it('shows macOS symbols for modifiers and arrows', () => {
+    expect(shortcutKeys('CommandOrControl+Shift+M')).toEqual(['⌘', '⇧', 'M']);
+    expect(shortcutKeys('Control+Alt+Up')).toEqual(['⌃', '⌥', '↑']);
+    expect(shortcutKeys('Super+k')).toEqual(['⌘', 'K']);
+    expect(shortcutKeys('Super+F5')).toEqual(['⌘', 'F5']);
   });
 });

@@ -23,7 +23,10 @@ The indicator permits clicks through to the app underneath it.
 **Preview border** displays a labelled preview for three seconds without changing the microphone.
 Closing the settings window keeps the app running in the menu bar.
 Quitting removes the border and keeps the microphone's current mute state.
-The app does not start automatically at login.
+Turn on **Open at login** in settings to start the app when you log in. The change applies immediately.
+A login start keeps the app in the menu bar and does not open the settings window.
+The app adds a launch agent to `~/Library/LaunchAgents` for this setting. Turning the setting off removes it.
+Install the app in `/Applications` before you turn the setting on. The launch agent records the app's current location.
 Close Mic Drop before you use MicMute. Both apps can change the same microphone and overwrite each other's state.
 
 ## Microphone scope

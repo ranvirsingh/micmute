@@ -10,7 +10,11 @@ use std::{
 use tauri::{
     Emitter, LogicalPosition, LogicalSize, Manager, State, WebviewUrl, WebviewWindowBuilder,
 };
+use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+
+/// Passed by the login item so a login start stays in the menu bar.
+const AUTOSTART_ARG: &str = "--autostart";
 
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -50,6 +54,7 @@ struct Status {
     shortcut_error: Option<String>,
     border_enabled: bool,
     badge_position: BadgePosition,
+    launch_at_login: bool,
     preview: bool,
 }
 impl Status {
@@ -65,6 +70,7 @@ struct Runtime {
     operation_error: Option<String>,
     pressed: bool,
     recording: bool,
+    launch_at_login: bool,
     preview_until: Option<Instant>,
     last: Option<Status>,
     screens: Option<Vec<overlay::Screen>>,
@@ -100,6 +106,7 @@ fn snapshot(runtime: &Runtime) -> Status {
         shortcut_error: runtime.shortcut_error.clone(),
         border_enabled: runtime.preferences.border_enabled,
         badge_position: runtime.preferences.badge_position,
+        launch_at_login: runtime.launch_at_login,
         preview: runtime
             .preview_until
             .is_some_and(|time| time > Instant::now()),
@@ -347,6 +354,24 @@ fn set_badge_position(
 }
 
 #[tauri::command]
+fn set_launch_at_login(
+    app: tauri::AppHandle,
+    enabled: bool,
+    state: State<AppState>,
+) -> Result<Status, String> {
+    let autolaunch = app.autolaunch();
+    if enabled {
+        autolaunch.enable()
+    } else {
+        autolaunch.disable()
+    }
+    .map_err(|error| format!("Cannot change the login item: {error}"))?;
+    // Read back the system state instead of trusting the request.
+    state.lock().unwrap().launch_at_login = autolaunch.is_enabled().unwrap_or(enabled);
+    Ok(refresh(&app))
+}
+
+#[tauri::command]
 fn preview_border(app: tauri::AppHandle) -> Status {
     app.state::<AppState>().lock().unwrap().preview_until =
         Some(Instant::now() + Duration::from_secs(3));
@@ -391,6 +416,11 @@ fn main() {
             show_settings(app)
         }))
         .plugin(
+            tauri_plugin_autostart::Builder::new()
+                .arg(AUTOSTART_ARG)
+                .build(),
+        )
+        .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, shortcut, event| {
                     let state = app.state::<AppState>();
@@ -433,12 +463,14 @@ fn main() {
                         .map_err(|e| format!("Shortcut unavailable: {e}"))
                 })
                 .err();
+            let launch_at_login = app.autolaunch().is_enabled().unwrap_or(false);
             app.manage(Mutex::new(Runtime {
                 preferences,
                 shortcut_error: error,
                 operation_error: None,
                 pressed: false,
                 recording: false,
+                launch_at_login,
                 preview_until: None,
                 last: None,
                 screens: None,
@@ -483,6 +515,9 @@ fn main() {
                 }
             });
             refresh(app.handle());
+            if !std::env::args().any(|arg| arg == AUTOSTART_ARG) {
+                show_settings(app.handle());
+            }
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -504,6 +539,7 @@ fn main() {
             toggle_mute,
             save_settings,
             set_badge_position,
+            set_launch_at_login,
             preview_border,
             hide_settings,
             set_recording,

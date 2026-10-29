@@ -27,3 +27,31 @@ export function recordShortcut(event: KeyPress): RecordedKey {
   if (key.startsWith('Arrow')) key = key.slice(5);
   return { kind: 'shortcut', value: [...modifiers, key].join('+') };
 }
+
+const symbols: Record<string, string> = {
+  CommandOrControl: '⌘',
+  CmdOrCtrl: '⌘',
+  Command: '⌘',
+  Cmd: '⌘',
+  Super: '⌘',
+  Meta: '⌘',
+  Control: '⌃',
+  Ctrl: '⌃',
+  Alt: '⌥',
+  Option: '⌥',
+  Shift: '⇧',
+  Up: '↑',
+  Down: '↓',
+  Left: '←',
+  Right: '→',
+  Space: 'Space',
+};
+
+// Splits an accelerator into the key caps shown in the settings window.
+export function shortcutKeys(value: string): string[] {
+  return value
+    .split('+')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => symbols[part] ?? (part.length === 1 ? part.toUpperCase() : part));
+}

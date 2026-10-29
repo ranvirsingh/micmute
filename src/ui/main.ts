@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { recordShortcut } from './shortcut';
+import { recordShortcut, shortcutKeys } from './shortcut';
 import './style.css';
 
 interface Status {
@@ -10,6 +10,7 @@ interface Status {
   shortcut_error: string | null;
   border_enabled: boolean;
   badge_position: string;
+  launch_at_login: boolean;
   preview: boolean;
 }
 const root = document.querySelector<HTMLDivElement>('#app')!;
@@ -22,44 +23,55 @@ if (overlay) {
 } else {
   root.innerHTML = `
     <main>
-      <header><div class="app-mark" aria-hidden="true">⌁</div><div><h1>MicMute</h1><p>A shortcut. A clear signal.</p></div></header>
-      <section class="status-card" aria-live="polite">
-        <div class="status-line"><span class="status-dot" id="status-dot"></span><strong id="mic-state">Checking microphone…</strong></div>
+      <header>
+        <svg class="app-mark" viewBox="0 0 512 512" aria-hidden="true"><rect x="24" y="24" width="464" height="464" rx="112" fill="#282a2b"/><rect x="48" y="48" width="416" height="416" rx="92" fill="none" stroke="#ec3046" stroke-width="20"/><rect x="218" y="128" width="76" height="162" rx="38" fill="#fff"/><path d="M180 244v14a76 76 0 0 0 152 0v-14M256 334v48m-46 0h92" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round"/></svg>
+        <div><h1>MicMute</h1><p>A shortcut. A clear signal.</p></div>
+      </header>
+      <section class="status-card" id="status-card" aria-live="polite">
+        <div class="status-line"><span class="status-dot" id="status-dot"></span><strong id="mic-state">Checking microphone…</strong><span class="keys" id="status-keys" title="Shortcut"></span></div>
         <p id="mic-name">System input</p>
         <button id="toggle" class="primary" disabled>Checking…</button>
       </section>
       <form id="settings">
-        <label for="shortcut">Keyboard shortcut</label>
-        <div class="shortcut-row"><input id="shortcut" spellcheck="false" autocomplete="off" aria-describedby="shortcut-help" value="CommandOrControl+Shift+M"><button type="button" id="record">Record</button></div>
-        <p class="help" id="shortcut-help">⌘ ⇧ M by default. Works while other apps are focused.</p>
-        <label class="checkbox"><input id="border" type="checkbox" checked><span>Show a red border while muted</span></label>
-        <fieldset class="position-control"><legend>Muted label position</legend>
-          <div class="position-grid">
-            ${[
-              ['nw', 'Top left', '↖'],
-              ['n', 'Top', '↑'],
-              ['ne', 'Top right', '↗'],
-              ['w', 'Left', '←'],
-              ['center', '', 'SCREEN'],
-              ['e', 'Right', '→'],
-              ['sw', 'Bottom left', '↙'],
-              ['s', 'Bottom', '↓'],
-              ['se', 'Bottom right', '↘'],
-            ]
-              .map(([value, label, arrow]) =>
-                value === 'center'
-                  ? '<span class="position-center" aria-hidden="true">SCREEN</span>'
-                  : `<label class="position-choice" title="${label}"><input type="radio" name="position" value="${value}" aria-label="${label}" ${value === 'se' ? 'checked' : ''}><span aria-hidden="true">${arrow}</span></label>`,
-              )
-              .join('')}
-          </div>
-          <p class="help">Choose a position to save it and preview for 3 seconds.</p>
-        </fieldset>
-        <div class="actions"><button id="save" class="secondary" type="submit">Save settings</button><button type="button" id="preview" class="text-button">Preview border</button></div>
+        <section class="panel panel-general">
+          <h2>General</h2>
+          <div class="shortcut-row"><input id="shortcut" aria-label="Keyboard shortcut" spellcheck="false" autocomplete="off" aria-describedby="shortcut-help" value="CommandOrControl+Shift+M"><button type="button" id="record">Record</button></div>
+          <p class="help" id="shortcut-help">Works in any app. Select Record, then press the new keys.</p>
+          <label class="switch-row divided"><span>Open at login<small>Starts quietly in the menu bar when you log in.</small></span><input id="login" class="switch" type="checkbox" role="switch"></label>
+        </section>
+        <section class="panel panel-indicator">
+          <h2>Indicator</h2>
+          <label class="switch-row"><span>Show a red border while muted</span><input id="border" class="switch" type="checkbox" role="switch" checked></label>
+          <fieldset class="position-control"><legend>Muted label position</legend>
+            <div class="position-layout">
+              <div class="position-grid">
+                ${[
+                  ['nw', 'Top left', '↖'],
+                  ['n', 'Top', '↑'],
+                  ['ne', 'Top right', '↗'],
+                  ['w', 'Left', '←'],
+                  ['center', '', 'SCREEN'],
+                  ['e', 'Right', '→'],
+                  ['sw', 'Bottom left', '↙'],
+                  ['s', 'Bottom', '↓'],
+                  ['se', 'Bottom right', '↘'],
+                ]
+                  .map(([value, label, arrow]) =>
+                    value === 'center'
+                      ? '<span class="position-center" aria-hidden="true">SCREEN</span>'
+                      : `<label class="position-choice" title="${label}"><input type="radio" name="position" value="${value}" aria-label="${label}" ${value === 'se' ? 'checked' : ''}><span aria-hidden="true">${arrow}</span></label>`,
+                  )
+                  .join('')}
+              </div>
+              <p class="help">Choose a position to save it and preview it for 3 seconds.</p>
+            </div>
+          </fieldset>
+          <div class="actions"><button id="save" class="secondary" type="submit">Save settings</button><button type="button" id="preview" class="text-button">Preview border</button></div>
+        </section>
       </form>
       <p id="message" role="status" class="message"></p>
       <p id="error" role="alert" class="error" hidden></p>
-      <footer><p>Controls the system input shown above. Use the same input in your call app. Quitting keeps its current mute state.</p><div><button id="hide" class="text-button">Hide to menu bar</button><button id="quit" class="text-button subtle">Quit</button></div></footer>
+      <footer><p>Controls the current system input. Quitting keeps its mute state.</p><div><button id="hide" class="text-button">Hide to menu bar</button><button id="quit" class="text-button subtle">Quit</button></div></footer>
     </main>`;
 }
 
@@ -89,7 +101,12 @@ function render(status: Status) {
       : 'Microphone unmuted'
     : 'Microphone unavailable';
   element('mic-name').textContent = mic?.name ?? 'Choose a supported input in macOS Sound settings.';
-  element('status-dot').className = `status-dot ${mic ? (mic.muted ? 'muted' : 'live') : 'unknown'}`;
+  const state = mic ? (mic.muted ? 'muted' : 'live') : 'unknown';
+  element('status-dot').className = `status-dot ${state}`;
+  element('status-card').dataset.state = state;
+  element('status-keys').replaceChildren(
+    ...shortcutKeys(status.shortcut).map((key) => Object.assign(document.createElement('kbd'), { textContent: key })),
+  );
   element('toggle').textContent = mic?.muted ? 'Unmute microphone' : 'Mute microphone';
   element<HTMLButtonElement>('toggle').disabled = !mic || busy;
   const error = [status.error, status.shortcut_error].filter(Boolean).join(' ');
@@ -98,6 +115,7 @@ function render(status: Status) {
   document.querySelectorAll<HTMLInputElement>('input[name="position"]').forEach((input) => {
     input.checked = input.value === status.badge_position;
   });
+  element<HTMLInputElement>('login').checked = status.launch_at_login;
   if (!dirty) {
     element<HTMLInputElement>('shortcut').value = status.shortcut;
     element<HTMLInputElement>('border').checked = status.border_enabled;
@@ -146,6 +164,14 @@ if (!overlay) {
       else if (latest) render(latest);
     }),
   );
+  element('login').addEventListener('change', async (event) => {
+    const input = event.currentTarget as HTMLInputElement;
+    input.disabled = true;
+    if (await act('set_launch_at_login', { enabled: input.checked }))
+      message(input.checked ? 'MicMute will open at login.' : 'MicMute will not open at login.');
+    else if (latest) render(latest);
+    input.disabled = false;
+  });
   const endRecording = () => {
     recording = false;
     void invoke('set_recording', { recording: false });

@@ -14,10 +14,11 @@
       {
         "label": "main",
         "title": "MicMute",
-        "width": 460,
-        "height": 760,
+        "width": 760,
+        "height": 500,
         "resizable": false,
-        "center": true
+        "center": true,
+        "visible": false
       }
     ],
     "security": {

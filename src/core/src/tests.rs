@@ -98,6 +98,7 @@ fn indicator_status() -> Status {
         shortcut_error: None,
         border_enabled: true,
         badge_position: BadgePosition::Se,
+        launch_at_login: false,
         preview: false,
     }
 }

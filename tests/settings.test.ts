@@ -12,6 +12,7 @@ const initialStatus = {
   shortcut_error: null as string | null,
   border_enabled: true,
   badge_position: 'se',
+  launch_at_login: false,
   preview: false,
 };
 type Status = Omit<typeof initialStatus, 'microphone'> & { microphone: typeof initialStatus.microphone | null };
@@ -166,6 +167,25 @@ describe('settings window', () => {
     await settle();
     expect(right.checked).toBe(true);
     expect(node('message').textContent).toBe('Cannot save settings');
+  });
+
+  it('turns open at login on and restores the switch when the change fails', async () => {
+    await mount();
+    const login = node<HTMLInputElement>('login');
+    expect(login.checked).toBe(false);
+    expect(node('status-keys').textContent).toBe('⌘⇧M');
+    status = { ...status, launch_at_login: true };
+    login.click();
+    await settle();
+    expect(bridge.invoke).toHaveBeenCalledWith('set_launch_at_login', { enabled: true });
+    expect(login.checked).toBe(true);
+    expect(login.disabled).toBe(false);
+    expect(node('message').textContent).toBe('MicMute will open at login.');
+    bridge.invoke.mockRejectedValueOnce('Cannot change the login item');
+    login.click();
+    await settle();
+    expect(login.checked).toBe(true);
+    expect(node('message').textContent).toBe('Cannot change the login item');
   });
 
   it('records shortcuts and cancels recording when the window loses focus', async () => {
